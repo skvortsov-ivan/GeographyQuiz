@@ -14,6 +14,8 @@ namespace GeographyQuiz.Services
     {
         private readonly HttpClient _httpClient;
         private readonly HybridCache _cache;
+        private static CountryRoundResponse? _lastRound;
+        private static bool _alreadyAnswered = false;
 
 
         public CountryService(HttpClient httpClient, HybridCache cache)
@@ -22,16 +24,29 @@ namespace GeographyQuiz.Services
             _cache = cache;
         }
 
-        public async Task<CountryRoundResponse> GenerateRoundAsync()
+        public async Task<CountryRoundResponse> GenerateRoundAsync(string? previousWinner = null)
         {
+            _alreadyAnswered = false;
             Console.WriteLine(">>> ROUND START");
 
-            // 1. Pick two random UN countries
+            
             var random = new Random();
-            var nameA = UNCountries.All[random.Next(UNCountries.All.Count)];
-            var nameB = UNCountries.All[random.Next(UNCountries.All.Count)];
+            string nameA;
 
-            while (nameA == nameB)
+            if (previousWinner == null)
+            {
+                // Pick two random UN countries on first round
+                nameA = UNCountries.All[random.Next(UNCountries.All.Count)];
+            }
+            else
+            {
+                // Keep the winner for consequative rounds
+                nameA = previousWinner;
+            }
+            //var nameA = UNCountries.All[random.Next(UNCountries.All.Count)];
+            string nameB = UNCountries.All[random.Next(UNCountries.All.Count)];
+
+            while (nameB == nameA)
                 nameB = UNCountries.All[random.Next(UNCountries.All.Count)];
 
             Console.WriteLine($">>> PICKED: {nameA} vs {nameB}");
@@ -43,16 +58,39 @@ namespace GeographyQuiz.Services
             long popA = ConvertPopulation(countryA.population);
             long popB = ConvertPopulation(countryB.population);
 
-            string correct = popA > popB ? "A" : "B";
+            _lastRound = new CountryRoundResponse(new CountryRound(countryA.name, popA), new CountryRound(countryB.name, popB));
 
             Console.WriteLine(">>> ROUND END");
 
             return new CountryRoundResponse(
                 new CountryRound(countryA.name, popA),
-                new CountryRound(countryB.name, popB),
-                correct
+                new CountryRound(countryB.name, popB)
             );
         }
+
+        public (bool isCorrect, CountryRound winner) EvaluateAnswer(string selected)
+        {
+            if (_lastRound == null)
+                throw new AlreadyAnsweredException("No round has been generated yet.");
+
+            if (_alreadyAnswered)
+                throw new AlreadyAnsweredException("You have already answered this round.");
+
+            _alreadyAnswered = true;
+
+            var chosen = selected == "A"
+                ? _lastRound.CountryA
+                : _lastRound.CountryB;
+
+            var other = selected == "A"
+                ? _lastRound.CountryB
+                : _lastRound.CountryA;
+
+            bool isCorrect = chosen.Population > other.Population;
+
+            return (isCorrect, isCorrect ? chosen : other);
+        }
+
 
         public async Task<CountryApiResponse> FetchCountryByNameAsync(string name)
         {

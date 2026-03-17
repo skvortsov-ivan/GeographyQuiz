@@ -18,8 +18,12 @@ namespace GeographyQuiz.DTOs
     // 3. En spelrunda
     public record CountryRoundResponse(
         CountryRound CountryA,
-        CountryRound CountryB,
-        string CorrectAnswer
+        CountryRound CountryB
     );
+
+    //public record CountryAnswerRequest(
+    //    string Selected  // "A" or "B"
+    //);
+
 }
 

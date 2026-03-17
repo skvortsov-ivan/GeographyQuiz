@@ -20,4 +20,17 @@ public class CountriesController : ControllerBase
         var round = await _countryService.GenerateRoundAsync();
         return Ok(round);
     }
+
+    [HttpPost("answer")]
+    public IActionResult SubmitAnswer([FromQuery] string selected)
+    {
+        var result = _countryService.EvaluateAnswer(selected);
+
+        return Ok(new
+        {
+            correct = result.isCorrect,
+            winner = result.winner
+        });
+    }
+
 }

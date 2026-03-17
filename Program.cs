@@ -72,6 +72,12 @@ app.UseExceptionHandler(exceptionApp =>
                 Title = "Bad Request",
                 Detail = ex.Message
             },
+            AlreadyAnsweredException ex => new Microsoft.AspNetCore.Mvc.ProblemDetails
+            {
+                Status = 400,
+                Title = "Bad Request",
+                Detail = ex.Message
+            },
             _ => new Microsoft.AspNetCore.Mvc.ProblemDetails
             {
                 Status = 500,
