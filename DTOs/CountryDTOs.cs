@@ -1,5 +1,6 @@
 ﻿using System.Text.Json;
 using System.Text.Json.Serialization;
+using GeographyQuiz.Models;
 
 namespace GeographyQuiz.DTOs
 {
@@ -17,13 +18,8 @@ namespace GeographyQuiz.DTOs
 
     // 3. En spelrunda
     public record CountryRoundResponse(
-        CountryRound CountryA,
-        CountryRound CountryB
+        Country CountryA,
+        Country CountryB
     );
-
-    //public record CountryAnswerRequest(
-    //    string Selected  // "A" or "B"
-    //);
-
 }
 

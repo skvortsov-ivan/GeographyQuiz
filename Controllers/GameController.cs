@@ -3,28 +3,28 @@ using GeographyQuiz.Models;
 using GeographyQuiz.Services;
 using Microsoft.AspNetCore.Mvc;
 
-[Route("api/countries")]
+[Route("api/game")]
 [ApiController]
-public class CountriesController : ControllerBase
+public class GameController : ControllerBase
 {
-    private readonly ICountryService _countryService;
+    private readonly IGameService _gameService;
 
-    public CountriesController(ICountryService countryService)
+    public GameController(IGameService gameService)
     {
-        _countryService = countryService;
+        _gameService = gameService;
     }
 
     [HttpGet("round")]
     public async Task<ActionResult<CountryRoundResponse>> GetRound()
     {
-        var round = await _countryService.GenerateRoundAsync();
+        var round = await _gameService.GenerateRoundAsync();
         return Ok(round);
     }
 
     [HttpPost("answer")]
     public IActionResult SubmitAnswer([FromQuery] string selected)
     {
-        var result = _countryService.EvaluateAnswer(selected);
+        var result = _gameService.EvaluateAnswer(selected);
 
         return Ok(new
         {
@@ -33,4 +33,10 @@ public class CountriesController : ControllerBase
         });
     }
 
+    [HttpPost("new")]
+    public IActionResult NewGame()
+    {
+        _gameService.ResetGame();
+        return Ok("New game started.");
+    }
 }
