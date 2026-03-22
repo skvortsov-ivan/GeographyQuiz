@@ -8,7 +8,9 @@ It includes JWT authentication, rate limiting, hybrid caching, Swagger documenta
 - Featuresfeatures
 - Tech Stacktech-stack
 - Architecturearchitecture
+- User Secrets Setup
 - Installation
+- Performance Measurement
 
 ## Overview
 GeographyQuiz is a backend‑only game where the player is shown two countries and must guess which one has the larger population.  
@@ -65,6 +67,16 @@ The API uses:
 | **Swagger / OpenAPI** | API documentation |
 | **ProblemDetails (RFC 7807)** | Standardized error responses |
 
+## User Secrets Setup
+
+This project requires a few secrets to run locally.  
+Make sure you are inside the project folder before running these commands.
+
+### API Ninjas Key  
+Used for fetching real population data.
+
+### JWT Secret Key  
+Used for signing authentication tokens.
 
 ## Installation
 
@@ -73,3 +85,29 @@ git clone https://github.com/<skvortsov-ivan>/GeographyQuiz.git
 cd GeographyQuiz
 dotnet restore
 dotnet run
+dotnet user-secrets set "ApiNinjas:ApiKey" "<YOUR_API_KEY>"
+dotnet user-secrets set "Jwt:Key" "<YOUR_SECRET_KEY>"
+```
+
+## Performance Measurement (Cache Hit vs Cache Miss)
+
+The API uses HybridCache to reduce external calls to the API Ninjas service.  
+To demonstrate the performance difference, the `/api/games/round` endpoint was measured under two conditions.
+
+### Cache Miss  
+This is the first time a country is requested, and the API must call the external service.
+
+Typical response time: 400-800 ms
+
+This includes network latency, external API processing, and JSON parsing.
+
+### Cache Hit  
+This occurs when the same country is requested again and the data is already stored in the cache.
+
+Typical response time is less than 1 ms
+
+### Summary  
+A cached request is in the order of 100 times faster than a non‑cached request.  
+This improves performance during gameplay, since countries can repeat across rounds.
+
+
