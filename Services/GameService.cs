@@ -46,7 +46,7 @@ public class GameService : IGameService
         }
         else
         {
-            nextA = _previousWinner;
+            nextA = await _countryService.GetCountryByNameAsync(_previousWinner.Name);
         }
 
         // Always pick a new random challenger

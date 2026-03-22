@@ -22,5 +22,8 @@ namespace GeographyQuiz.DTOs
 
     // Represents the winner of a round
     public record WinnerDto(string Name);
+
+    // Represents a cached country
+    public record CachedCountry(string Name, long Population);
 }
 
