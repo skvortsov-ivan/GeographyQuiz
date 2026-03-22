@@ -24,17 +24,22 @@ public class GameService : IGameService
         _countryService = countryService;
     }
 
+    // Generates a new round by selecting two countries
     public async Task<CountryRoundResponse> GenerateRoundAsync()
     {
+        // Prevent generating more rounds after the game ends
         if (_isGameOver)
             throw new GameOverException("Game over. You have reached the 5-round limit.");
 
+        // Prevent skipping answers between rounds
         if (_roundCount > 0 && !_alreadyAnswered)
             throw new MustAnswerException("You must answer first before proceeding to the next round.");
 
         Country? nextA;
         Country? nextB;
 
+        // First round - Pick a random country
+        // Later rounds - Use previous winner as country A
         if (_previousWinner == null)
         {
             nextA = await _countryService.GetRandomCountryAsync();
@@ -44,11 +49,13 @@ public class GameService : IGameService
             nextA = _previousWinner;
         }
 
+        // Always pick a new random challenger
         nextB = await _countryService.GetRandomCountryAsync();
 
         if (nextA == null || nextB == null)
             throw new BadRequestException("Failed to fetch countries. Try again.");
 
+        // Ensure A and B are not the same country
         int safety = 0;
         while (nextB.Name == nextA.Name && safety < 5)
         {
@@ -61,12 +68,15 @@ public class GameService : IGameService
 
         _alreadyAnswered = false;
 
+        // Update round counters
         _roundCount++;
         _currentRound = _roundCount;
 
+        // Mark game as finished after max rounds
         if (_roundCount == MaxRounds)
             _isGameOver = true;
 
+        // Store current round countries
         _countryA = nextA;
         _countryB = nextB;
 
@@ -74,6 +84,7 @@ public class GameService : IGameService
  );
     }
 
+    // Evaluate the player's answer and determines the winner
     public Task<(bool isCorrect, WinnerDto winner)> EvaluateAnswer(string selected)
     {
         Country chosen;
@@ -99,6 +110,7 @@ public class GameService : IGameService
             other = _countryA;
         }
 
+        // Check if the answer is correct
         bool isCorrect = chosen.Population > other.Population;
 
         // Determine the winner
@@ -116,6 +128,7 @@ public class GameService : IGameService
         return Task.FromResult((isCorrect, winnerDto));
     }
 
+    // Resets game state to start a new game
     public Task ResetGame()
     {
         _roundCount = 0;

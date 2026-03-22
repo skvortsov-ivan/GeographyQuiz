@@ -8,21 +8,17 @@ using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// ------------------------------------------------------------
 // 1. SERVICES (Dependency Injection)
-// ------------------------------------------------------------
 
-// Controllers
+// Add Controllers
 builder.Services.AddControllers();
 
-// CountryService (NYTT — ditt spel)
-//builder.Services.AddScoped<ICountryService, CountryService>();
-
+// Register application services
 builder.Services.AddScoped<IGameService, GameService>();
 builder.Services.AddScoped<ILeaderboardService, LeaderboardService>();
 
 
-// Typed HttpClient för API Ninjas
+// Typed HttpClient for API Ninjas (country data)
 builder.Services.AddHttpClient<ICountryService, CountryService>(client =>
 {
     client.BaseAddress = new Uri("https://api.api-ninjas.com/v1/country");
@@ -30,9 +26,10 @@ builder.Services.AddHttpClient<ICountryService, CountryService>(client =>
         builder.Configuration["ApiNinjas:ApiKey"]);
 });
 
+// Swagger configuration with JWT support
 builder.Services.AddSwaggerGen(options =>
 {
-    // 1. Definiera att API:et använder Bearer Tokens (JWT) för säkerhet
+    // Define Bearer authentication scheme
     options.AddSecurityDefinition("Bearer", new Microsoft.OpenApi.Models.OpenApiSecurityScheme
     {
         Type = Microsoft.OpenApi.Models.SecuritySchemeType.Http,
@@ -41,7 +38,7 @@ builder.Services.AddSwaggerGen(options =>
         Description = "Klistra in din JWT-token här!"
     });
 
-    // 2. Tvinga dokumentationsgränssnittet (Swagger/Scalar) att använda låset på alla endpoints
+    // Require JWT for all endpoints in Swagger UI
     options.AddSecurityRequirement(new Microsoft.OpenApi.Models.OpenApiSecurityRequirement
     {
         {
@@ -58,7 +55,7 @@ builder.Services.AddSwaggerGen(options =>
     });
 });
 
-// ProblemDetails (RFC 7807)
+// ProblemDetails for standardized error responses (RFC 7807)
 builder.Services.AddProblemDetails(options =>
 {
     options.CustomizeProblemDetails = context =>
@@ -67,11 +64,13 @@ builder.Services.AddProblemDetails(options =>
     };
 });
 
+// Rate limiting configuration
 builder.Services.AddRateLimiter(options =>
 {
-    // Vi bestämmer att om man blir nekad ska man få 429 Too Many Requests
+    // Return 429 when rate limit is exceeded
     options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
 
+    // Fixed window limiter (used for POST endpoints)
     options.AddFixedWindowLimiter("fixed", config =>
     {
         config.Window = TimeSpan.FromMinutes(1); // Fönstret är 1 minut långt
@@ -79,6 +78,7 @@ builder.Services.AddRateLimiter(options =>
         config.QueueLimit = 0; // Vi tillåter ingen kö just nu. Blir det fullt så är det tvärnit.
     });
 
+    // Sliding window limiter (used for GET endpoints)
     options.AddSlidingWindowLimiter("sliding", config =>
     {
         config.Window = TimeSpan.FromMinutes(1);
@@ -87,14 +87,15 @@ builder.Services.AddRateLimiter(options =>
     });
 });
 
-// Swagger
+// Swagger endpoint
 builder.Services.AddEndpointsApiExplorer();
 
-// HybridCache (för caching)
+// HybridCache for caching API responses
 #pragma warning disable EXTEXP0018
 builder.Services.AddHybridCache();
 #pragma warning restore EXTEXP0018
 
+// JWT authentication configuration
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {
@@ -111,21 +112,21 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
         };
     });
 
+// Authorization policies
 builder.Services.AddAuthorization(options =>
 {
     options.AddPolicy("AdminOnly", policy =>
         policy.RequireRole("Admin"));
 });
 
-builder.Services.AddAuthorization();
-
+// Build the application
 var app = builder.Build();
 
-// ------------------------------------------------------------
-// 2. MIDDLEWARE PIPELINE
-// ------------------------------------------------------------
 
-// Custom Exception Middleware (HÖGST UPP)
+
+// 2. MIDDLEWARE PIPELINE
+
+// Global exception handler
 app.UseExceptionHandler(exceptionApp =>
 {
     exceptionApp.Run(async context =>
@@ -134,6 +135,7 @@ app.UseExceptionHandler(exceptionApp =>
             .Get<Microsoft.AspNetCore.Diagnostics.IExceptionHandlerFeature>()
             ?.Error;
 
+        // Map custom exceptions to ProblemDetails
         var problemDetails = exception switch
         {
             NotFoundException ex => new Microsoft.AspNetCore.Mvc.ProblemDetails
@@ -180,23 +182,28 @@ app.UseExceptionHandler(exceptionApp =>
     });
 });
 
-// Swagger i utvecklingsmiljö
+// Enable Swagger in development mode
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI();
 }
 
+// Redirects all HTTP requests to HTTPS
 app.UseHttpsRedirection();
 
-app.UseRouting();     
+// Enable routing
+app.UseRouting();
 
-app.UseRateLimiter();  
+// Enable rate limiting
+app.UseRateLimiter();
 
+// Enable authentication & authorization
 app.UseAuthentication();
-
 app.UseAuthorization();
 
+// Map controller endpoints
 app.MapControllers();
 
+// Start the application
 app.Run();

@@ -17,6 +17,8 @@ namespace GeographyQuiz.Controllers
             _leaderboardService = leaderboardService;
         }
 
+        // Adds a new score to the leaderboard
+        // Rate limited with fixed window (10 req/min)
         [HttpPost]
         [EnableRateLimiting("fixed")]
         public async Task<IActionResult> AddScore([FromBody] LeaderboardRequest request)
@@ -25,6 +27,8 @@ namespace GeographyQuiz.Controllers
             return Ok(entry);
         }
 
+        // Returns leaderboard entries
+        // Rate limited with sliding window (10 req/min)
         [HttpGet]
         [EnableRateLimiting("sliding")]
         public async Task<IActionResult> GetLeaderboard(
@@ -35,7 +39,8 @@ namespace GeographyQuiz.Controllers
             return Ok(entries);
         }
 
-
+        // Updates a player's score (Admin only)
+        // Rate limiting disabled for admin endpoints
         [HttpPut("{playerName}")]
         [DisableRateLimiting]
         [Authorize(Roles = "Admin")]
@@ -45,6 +50,8 @@ namespace GeographyQuiz.Controllers
             return Ok(updated);
         }
 
+        // Deletes a leaderboard entry (Admin only)
+        // Rate limiting disabled for admin endpoints
         [HttpDelete("{playerName}")]
         [DisableRateLimiting]
         [Authorize(Roles = "Admin")]
@@ -54,6 +61,8 @@ namespace GeographyQuiz.Controllers
             return Ok($"Removed {playerName} from leaderboard.");
         }
 
+        // Returns paginated leaderboard results
+        // Rate limited with sliding window (10 req/min)
         [HttpGet("paged")]
         [EnableRateLimiting("fixed")]
         public async Task<IActionResult> GetPaged(

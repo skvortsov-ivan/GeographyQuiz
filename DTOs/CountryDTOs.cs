@@ -4,23 +4,23 @@ using GeographyQuiz.Models;
 
 namespace GeographyQuiz.DTOs
 {
-    // Response från API Ninjas. Måste vara lowcase för att det är så informationen är lagrad i Json
+    // Response from API Ninjas. Must be lower case because that's how the information is stored in the Json.
     public record CountryApiResponse(
         string name,
         JsonElement population
     );
 
-    // DTO som innehåller endast namn på landet för en spelrunda.
+    // Represents a single country shown in a round
     public record CountryRound(string Name);
 
 
-    // En spelrunda
+    // Response containing the two countries for the current round
     public record CountryRoundResponse(
         CountryRound CountryA,
         CountryRound CountryB
     );
 
-    // DTO som innehåller namnet på vinnaren
+    // Represents the winner of a round
     public record WinnerDto(string Name);
 }
 

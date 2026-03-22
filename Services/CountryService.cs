@@ -20,13 +20,12 @@ namespace GeographyQuiz.Services
             _cache = cache;
         }
 
-        // ------------------------------------------------------------
         // Fetch a country by name (API + cache)
-        // ------------------------------------------------------------
         public async Task<Country> GetCountryByNameAsync(string name)
         {
             var cacheKey = $"country_{name.ToLower()}";
 
+            // Retrieve from cache or fetch from API if missing
             var countryData = await _cache.GetOrCreateAsync(cacheKey,
                 async cancel =>
                 {
@@ -47,15 +46,14 @@ namespace GeographyQuiz.Services
             return ConvertToCountry(countryData);
         }
 
-        // ------------------------------------------------------------
         // Get a random UN country
-        // ------------------------------------------------------------
         public async Task<Country> GetRandomCountryAsync()
         {
             var name = UNCountries.All[_random.Next(UNCountries.All.Count)];
             return await GetCountryByNameAsync(name);
         }
-      
+
+        // Converts API response into a Country model
         private Country ConvertToCountry(CountryApiResponse countryData)
         {
             return new Country
@@ -65,6 +63,7 @@ namespace GeographyQuiz.Services
             };
         }
 
+        // Converts JsonElement population value
         private long ConvertPopulation(JsonElement value)
         {
             if (value.ValueKind == JsonValueKind.Number &&

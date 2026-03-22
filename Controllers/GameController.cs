@@ -4,7 +4,6 @@ using GeographyQuiz.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 
-//Routes ska alltid vara i plural
 [Route("api/games")]
 [ApiController]
 public class GameController : ControllerBase
@@ -16,6 +15,8 @@ public class GameController : ControllerBase
         _gameService = gameService;
     }
 
+    // Returns a new round with two countries
+    // Rate limited with sliding window (10 req/min)
     [HttpGet("round")]
     [EnableRateLimiting("sliding")]
     public async Task<ActionResult<CountryRoundResponse>> GetRound()
@@ -24,6 +25,8 @@ public class GameController : ControllerBase
         return Ok(round);
     }
 
+    // Evaluates the player's answer for the current round
+    // Rate limited with fixed window (10 req/min)
     [HttpPost("answer")]
     [EnableRateLimiting("fixed")]
     public async Task<IActionResult> SubmitAnswer([FromQuery] string selected)
@@ -37,6 +40,8 @@ public class GameController : ControllerBase
         });
     }
 
+    // Resets all game state and starts a new game
+    // Rate limited with fixed window (10 req/min)
     [HttpPost("new")]
     [EnableRateLimiting("fixed")]
     public async Task<IActionResult> NewGame()
@@ -44,5 +49,4 @@ public class GameController : ControllerBase
         await _gameService.ResetGame();
         return Ok("New game started.");
     }
-
 }

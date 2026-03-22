@@ -1,5 +1,6 @@
 ﻿namespace GeographyQuiz.Data
 {
+    // Database representation of all UN approved countries used for making API calls.
     public static class UNCountries
     {
         public static readonly List<string> All = new()

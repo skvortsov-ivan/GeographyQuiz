@@ -8,6 +8,7 @@ namespace GeographyQuiz.Services
     {
         private static readonly List<LeaderboardEntry> _entries = new();
 
+        // Adds a new leaderboard entry
         public Task<LeaderboardEntry> AddEntryAsync(string playerName, int score)
         {
             var entry = new LeaderboardEntry
@@ -21,6 +22,7 @@ namespace GeographyQuiz.Services
             return Task.FromResult(entry);
         }
 
+        // Returns all entries sorted by score
         public Task<List<LeaderboardEntry>> GetEntriesAsync()
         {
             var result = _entries
@@ -30,16 +32,19 @@ namespace GeographyQuiz.Services
             return Task.FromResult(result);
         }
 
+        // Returns filtered leaderboard results (by name and/or date)
         public Task<List<LeaderboardEntry>> GetFilteredAsync(string? name, DateOnly? date)
         {
             var query = _entries.AsQueryable();
 
+            // Filter by player name
             if (!string.IsNullOrWhiteSpace(name))
             {
                 query = query.Where(e =>
                     e.PlayerName.Contains(name, StringComparison.OrdinalIgnoreCase));
             }
 
+            // Filter by date
             if (date.HasValue)
             {
                 query = query.Where(e => e.Date == date.Value);
@@ -52,6 +57,7 @@ namespace GeographyQuiz.Services
             return Task.FromResult(result);
         }
 
+        // Updates an existing player's score
         public Task<LeaderboardEntry> UpdateAsync(string playerName, int newScore)
         {
             var entry = _entries.FirstOrDefault(e => e.PlayerName == playerName);
@@ -64,6 +70,7 @@ namespace GeographyQuiz.Services
             return Task.FromResult(entry);
         }
 
+        // Deletes a leaderboard entry by player name
         public Task DeleteAsync(string playerName)
         {
             var entry = _entries.FirstOrDefault(e => e.PlayerName == playerName);
@@ -74,9 +81,10 @@ namespace GeographyQuiz.Services
             return Task.CompletedTask;
         }
 
+        // Returns a paginated leaderboard result
         public Task<PaginatedLeaderboardResponse<LeaderboardEntry>> GetPagedAsync(int page, int pageSize)
         {
-            // Enforce max page size of 10
+            // Max page size of 10
             if (pageSize > 10)
                 pageSize = 10;
 

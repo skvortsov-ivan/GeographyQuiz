@@ -16,24 +16,27 @@ namespace GeographyQuiz.Controllers
             _config = config;
         }
 
+        // Authenticates a user and returns a JWT token
         [HttpPost("login")]
         public IActionResult Login([FromBody] LoginRequest request)
         {
-            // Validera användaren (I en riktig app kollar vi mot databasen)
+            // Basic validation (in a real app, validate against a database)
             if (request.Username != "admin" || request.Password != "123")
             {
                 return Unauthorized("Felaktigt användarnamn eller lösenord.");
             }
 
-            // Skapa säkerhetsnyckeln utifrån vår hemlighet i appsettings.json
+            // Create signing key from appsettings.json secret
             var securityKey = new SymmetricSecurityKey(System.Text.Encoding.UTF8.GetBytes(_config["Jwt:Key"]!));
             var credentials = new SigningCredentials(securityKey, SecurityAlgorithms.HmacSha256);
 
+            // Claims included in the token (username + admin role)
             var claims = new[] {
-            new Claim(JwtRegisteredClaimNames.Sub, request.Username),
-            new Claim(ClaimTypes.Role, "Admin")};
+                new Claim(JwtRegisteredClaimNames.Sub, request.Username),
+                new Claim(ClaimTypes.Role, "Admin")
+            };
 
-            // Skapa själva token-objektet med vår konfiguration
+            // Create the JWT token
             var token = new JwtSecurityToken(
                 issuer: _config["Jwt:Issuer"],
                 audience: _config["Jwt:Audience"],
@@ -41,12 +44,12 @@ namespace GeographyQuiz.Controllers
                 expires: DateTime.Now.AddHours(1),
                 signingCredentials: credentials);
 
-            // Returnera token som en sträng
+            // Convert token object to string and return token
             var tokenString = new JwtSecurityTokenHandler().WriteToken(token);
             return Ok(new { Token = tokenString });
         }
     }
 
-    // En enkel DTO för att ta emot datan
+    // DTO for login credentials
     public record LoginRequest(string Username, string Password);
 }

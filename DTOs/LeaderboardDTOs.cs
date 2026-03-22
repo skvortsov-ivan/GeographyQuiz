@@ -4,7 +4,7 @@ using System.ComponentModel.DataAnnotations;
 
 namespace GeographyQuiz.DTOs
 {
-    // GET, POST, UPDATE, DELETE
+    // Request body for adding a new leaderboard entry
     public record LeaderboardRequest
     {
         [Required(ErrorMessage = "Player name is required.")]
@@ -13,6 +13,7 @@ namespace GeographyQuiz.DTOs
         public int Score { get; set; }
     }
 
+    // Request body for updating an existing leaderboard entry
     public record UpdateLeaderboardRequest
     {
         [Range(0, 5, ErrorMessage = "Score must be between 0 and 5.")]
