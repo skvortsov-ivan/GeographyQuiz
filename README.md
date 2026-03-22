@@ -12,7 +12,7 @@ It includes JWT authentication, rate limiting, hybrid caching, Swagger documenta
 
 ## Overview
 GeographyQuiz is a backend‑only game where the player is shown two countries and must guess which one has the larger population.  
-The game lasts **5 rounds**, and each round’s winner becomes the “champion” for the next round.
+The game lasts **5 rounds**.
 
 The API uses:
 
