@@ -3,9 +3,6 @@ using GeographyQuiz.DTOs;
 using GeographyQuiz.Exceptions;
 using GeographyQuiz.Models;
 using Microsoft.Extensions.Caching.Hybrid;
-using Microsoft.Extensions.Caching.Memory;
-using System.Net.Http;
-using System.Net.Http.Json;
 using System.Text.Json;
 
 namespace GeographyQuiz.Services
@@ -14,7 +11,8 @@ namespace GeographyQuiz.Services
     {
         private readonly HttpClient _httpClient;
         private readonly HybridCache _cache;
-
+        private readonly Random _random = new();
+        private static int _apiCallAmount = 0;
 
         public CountryService(HttpClient httpClient, HybridCache cache)
         {
@@ -22,104 +20,61 @@ namespace GeographyQuiz.Services
             _cache = cache;
         }
 
-        public async Task<CountryRoundResponse> GenerateRoundAsync()
+        // Fetch a country by name (API + cache)
+        public async Task<Country> GetCountryByNameAsync(string name)
         {
-            Console.WriteLine(">>> ROUND START");
-
-            // 1. Pick two random UN countries
-            var random = new Random();
-            var nameA = UNCountries.All[random.Next(UNCountries.All.Count)];
-            var nameB = UNCountries.All[random.Next(UNCountries.All.Count)];
-
-            while (nameA == nameB)
-                nameB = UNCountries.All[random.Next(UNCountries.All.Count)];
-
-            Console.WriteLine($">>> PICKED: {nameA} vs {nameB}");
-
-            // 2. Fetch each country
-            var countryA = await FetchCountryByNameAsync(nameA);
-            var countryB = await FetchCountryByNameAsync(nameB);
-
-            long popA = ConvertPopulation(countryA.population);
-            long popB = ConvertPopulation(countryB.population);
-
-            string correct = popA > popB ? "A" : "B";
-
-            Console.WriteLine(">>> ROUND END");
-
-            return new CountryRoundResponse(
-                new CountryRound(countryA.name, popA),
-                new CountryRound(countryB.name, popB),
-                correct
-            );
-        }
-
-        public async Task<CountryApiResponse> FetchCountryByNameAsync(string name)
-        {
-            // Each country has it's own cache key
             var cacheKey = $"country_{name.ToLower()}";
 
-            // Check if country exists in cash. If not then go into the lambda and make API call
-            var country = await _cache.GetOrCreateAsync(cacheKey,
+            // Retrieve from cache or fetch from API if missing
+            var countryData = await _cache.GetOrCreateAsync(cacheKey,
                 async cancel =>
                 {
-                    Console.WriteLine($">>> CACHE MISS: Fetching {name} from API");
-
-                    // API call
+                    _apiCallAmount++;
+                    Console.WriteLine($"Making API call number {_apiCallAmount}");
                     var response = await _httpClient.GetAsync($"?name={name}", cancel);
                     response.EnsureSuccessStatusCode();
 
-
                     var json = await response.Content.ReadAsStringAsync(cancel);
-                    Console.WriteLine("RAW JSON:");
-                    Console.WriteLine(json);
+                    var popAndNameData = JsonSerializer.Deserialize<List<CountryApiResponse>>(json);
 
-                    var list = JsonSerializer.Deserialize<List<CountryApiResponse>>(json);
-                    Console.WriteLine("DESERIALIZED OBJECT:");
-                    Console.WriteLine($"Count: {list?.Count}");
+                    return popAndNameData?.FirstOrDefault();
+                });
 
-                    if (list != null)
-                    {
-                        foreach (var item in list)
-                        {
-                            Console.WriteLine($"Name: {item.name}");
-                            Console.WriteLine($"Population (JsonElement): {item.population}");
-                            Console.WriteLine($"Population ValueKind: {item.population.ValueKind}");
-                            Console.WriteLine("-----");
-                        }
-                    }
-
-
-                    return list?.FirstOrDefault();
-                }
-            );
-
-            if (country == null)
+            if (countryData == null)
                 throw new NotFoundException($"Country '{name}' not found in API");
 
-            return country;
+            return ConvertToCountry(countryData);
         }
 
+        // Get a random UN country
+        public async Task<Country> GetRandomCountryAsync()
+        {
+            var name = UNCountries.All[_random.Next(UNCountries.All.Count)];
+            return await GetCountryByNameAsync(name);
+        }
 
+        // Converts API response into a Country model
+        private Country ConvertToCountry(CountryApiResponse countryData)
+        {
+            return new Country
+            {
+                Name = countryData.name,
+                Population = ConvertPopulation(countryData.population)
+            };
+        }
+
+        // Converts JsonElement population value
         private long ConvertPopulation(JsonElement value)
         {
-            if (value is JsonElement j)
-            {
-                //Console.WriteLine(j.ValueKind);
-                //Console.WriteLine(j.ToString());
+            if (value.ValueKind == JsonValueKind.Number &&
+                value.TryGetDouble(out double d))
+                return (long)d;
 
-                if (j.ValueKind == JsonValueKind.Number)
-                    return j.TryGetDouble(out double d) ? (long)d : 0;
-
-                if (j.ValueKind == JsonValueKind.String)
-                    return long.TryParse(j.GetString(), out long s) ? s : 0;
-
-                return 0;
-            }
+            if (value.ValueKind == JsonValueKind.String &&
+                long.TryParse(value.GetString(), out long s))
+                return s;
 
             return 0;
         }
     }
 }
-
-
