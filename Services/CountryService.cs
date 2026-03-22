@@ -25,25 +25,52 @@ namespace GeographyQuiz.Services
         {
             var cacheKey = $"country_{name.ToLower()}";
 
+            bool cacheMiss = false;
+
+            var totalSw = System.Diagnostics.Stopwatch.StartNew();
             // Retrieve from cache or fetch from API if missing
-            var countryData = await _cache.GetOrCreateAsync(cacheKey,
+            var cached = await _cache.GetOrCreateAsync(cacheKey,
                 async cancel =>
                 {
+                    cacheMiss = true;
+
                     _apiCallAmount++;
                     Console.WriteLine($"Making API call number {_apiCallAmount}");
+
+                    var sw = System.Diagnostics.Stopwatch.StartNew();
                     var response = await _httpClient.GetAsync($"?name={name}", cancel);
+                    sw.Stop();
+
+                    Console.WriteLine($"[CACHE MISS] Fetching country: {name} took {sw.ElapsedMilliseconds} ms");
+
                     response.EnsureSuccessStatusCode();
 
                     var json = await response.Content.ReadAsStringAsync(cancel);
-                    var popAndNameData = JsonSerializer.Deserialize<List<CountryApiResponse>>(json);
+                    var apiData = JsonSerializer.Deserialize<List<CountryApiResponse>>(json);
 
-                    return popAndNameData?.FirstOrDefault();
+                    var data = apiData?.FirstOrDefault();
+                    if (data == null)
+                        throw new NotFoundException($"Country '{name}' not found in API");
+
+                    // Store a serializable version of Json into the cache
+                    return new CachedCountry(
+                        data.name,
+                        ConvertPopulation(data.population)
+                    );
                 });
 
-            if (countryData == null)
-                throw new NotFoundException($"Country '{name}' not found in API");
+            totalSw.Stop();
+            if (!cacheMiss)
+            {
+                Console.WriteLine($"[CACHE HIT] Returning cached data for {name} in {totalSw.ElapsedMilliseconds} ms");
+            }
 
-            return ConvertToCountry(countryData);
+            // Convert cached model back to your real Country model
+            return new Country
+            {
+                Name = cached.Name,
+                Population = cached.Population
+            };
         }
 
         // Get a random UN country
