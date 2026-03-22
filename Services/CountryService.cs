@@ -12,6 +12,7 @@ namespace GeographyQuiz.Services
         private readonly HttpClient _httpClient;
         private readonly HybridCache _cache;
         private readonly Random _random = new();
+        private static int _apiCallAmount = 0;
 
         public CountryService(HttpClient httpClient, HybridCache cache)
         {
@@ -29,6 +30,8 @@ namespace GeographyQuiz.Services
             var countryData = await _cache.GetOrCreateAsync(cacheKey,
                 async cancel =>
                 {
+                    _apiCallAmount++;
+                    Console.WriteLine($"Making API call number {_apiCallAmount}");
                     var response = await _httpClient.GetAsync($"?name={name}", cancel);
                     response.EnsureSuccessStatusCode();
 

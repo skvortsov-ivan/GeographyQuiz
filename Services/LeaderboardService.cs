@@ -1,4 +1,5 @@
-﻿using GeographyQuiz.Exceptions;
+﻿using GeographyQuiz.DTOs;
+using GeographyQuiz.Exceptions;
 using GeographyQuiz.Models;
 
 namespace GeographyQuiz.Services
@@ -7,7 +8,7 @@ namespace GeographyQuiz.Services
     {
         private static readonly List<LeaderboardEntry> _entries = new();
 
-        public LeaderboardEntry AddEntry(string playerName, int score)
+        public Task<LeaderboardEntry> AddEntryAsync(string playerName, int score)
         {
             var entry = new LeaderboardEntry
             {
@@ -15,19 +16,21 @@ namespace GeographyQuiz.Services
                 Score = score,
                 Date = DateOnly.FromDateTime(DateTime.Today)
             };
-
+            Console.WriteLine($"Entries count: {_entries.Count}");
             _entries.Add(entry);
-            return entry;
+            return Task.FromResult(entry);
         }
 
-        public List<LeaderboardEntry> GetEntries()
+        public Task<List<LeaderboardEntry>> GetEntriesAsync()
         {
-            return _entries
+            var result = _entries
                 .OrderByDescending(e => e.Score)
                 .ToList();
+
+            return Task.FromResult(result);
         }
 
-        public List<LeaderboardEntry> GetFiltered(string? name, DateOnly? date)
+        public Task<List<LeaderboardEntry>> GetFilteredAsync(string? name, DateOnly? date)
         {
             var query = _entries.AsQueryable();
 
@@ -42,12 +45,14 @@ namespace GeographyQuiz.Services
                 query = query.Where(e => e.Date == date.Value);
             }
 
-            return query
+            var result = query
                 .OrderByDescending(e => e.Score)
                 .ToList();
+
+            return Task.FromResult(result);
         }
 
-        public LeaderboardEntry Update(string playerName, int newScore)
+        public Task<LeaderboardEntry> UpdateAsync(string playerName, int newScore)
         {
             var entry = _entries.FirstOrDefault(e => e.PlayerName == playerName);
             if (entry == null)
@@ -55,19 +60,50 @@ namespace GeographyQuiz.Services
 
             entry.Score = newScore;
             entry.Date = DateOnly.FromDateTime(DateTime.Today);
-            return entry;
+            
+            return Task.FromResult(entry);
         }
 
-        public void Delete(string playerName)
+        public Task DeleteAsync(string playerName)
         {
             var entry = _entries.FirstOrDefault(e => e.PlayerName == playerName);
             if (entry == null)
                 throw new NotFoundException($"Player '{playerName}' not found.");
 
             _entries.Remove(entry);
+            return Task.CompletedTask;
         }
 
+        public Task<PaginatedLeaderboardResponse<LeaderboardEntry>> GetPagedAsync(int page, int pageSize)
+        {
+            // Enforce max page size of 10
+            if (pageSize > 10)
+                pageSize = 10;
 
+            if (page < 1)
+                page = 1;
+
+            var sorted = _entries
+                .OrderByDescending(e => e.Score)
+                .ToList();
+
+            int totalCount = sorted.Count;
+            int totalPages = (int)Math.Ceiling(totalCount / (double)pageSize);
+
+            var items = sorted
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .ToList();
+
+            var response = new PaginatedLeaderboardResponse<LeaderboardEntry>(
+                Items: items,
+                Page: page,
+                PageSize: pageSize,
+                TotalCount: totalCount,
+                TotalPages: totalPages
+            );
+            return Task.FromResult(response);
+        }
     }
 }
 

@@ -1,14 +1,16 @@
-﻿using GeographyQuiz.Models;
+﻿using GeographyQuiz.DTOs;
+using GeographyQuiz.Models;
 
 namespace GeographyQuiz.Services
 {
     public interface ILeaderboardService
     {
-        LeaderboardEntry AddEntry(string playerName, int score);
-        List<LeaderboardEntry> GetEntries();
-        List<LeaderboardEntry> GetFiltered(string? name, DateOnly? date);
-        LeaderboardEntry Update(string playerName, int newScore);
-        void Delete(string playerName);
+        Task<LeaderboardEntry> AddEntryAsync(string playerName, int score);
+        Task<List<LeaderboardEntry>> GetEntriesAsync();
+        Task<List<LeaderboardEntry>> GetFilteredAsync(string? name, DateOnly? date);
+        Task<PaginatedLeaderboardResponse<LeaderboardEntry>> GetPagedAsync(int page, int pageSize);
+        Task<LeaderboardEntry> UpdateAsync(string playerName, int newScore);
+        Task DeleteAsync(string playerName);
     }
 }
 

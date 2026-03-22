@@ -29,8 +29,35 @@ public class GameService : IGameService
         if (_isGameOver)
             throw new GameOverException("Game over. You have reached the 5-round limit.");
 
-        if (!_alreadyAnswered)
+        if (_roundCount > 0 && !_alreadyAnswered)
             throw new MustAnswerException("You must answer first before proceeding to the next round.");
+
+        Country? nextA;
+        Country? nextB;
+
+        if (_previousWinner == null)
+        {
+            nextA = await _countryService.GetRandomCountryAsync();
+        }
+        else
+        {
+            nextA = _previousWinner;
+        }
+
+        nextB = await _countryService.GetRandomCountryAsync();
+
+        if (nextA == null || nextB == null)
+            throw new BadRequestException("Failed to fetch countries. Try again.");
+
+        int safety = 0;
+        while (nextB.Name == nextA.Name && safety < 5)
+        {
+            nextB = await _countryService.GetRandomCountryAsync();
+            safety++;
+        }
+
+        if (nextB == null)
+            throw new BadRequestException("Failed to fetch a valid challenger country.");
 
         _alreadyAnswered = false;
 
@@ -40,26 +67,14 @@ public class GameService : IGameService
         if (_roundCount == MaxRounds)
             _isGameOver = true;
 
-        // A = previous winner or random
-        if (_previousWinner == null)
-        {
-            _countryA = await _countryService.GetRandomCountryAsync();
-        }
-        else
-        {
-            _countryA = _previousWinner;
-        }
+        _countryA = nextA;
+        _countryB = nextB;
 
-        // B = new challenger
-        _countryB = await _countryService.GetRandomCountryAsync();
-
-        while (_countryB.Name == _countryA.Name)
-            _countryB = await _countryService.GetRandomCountryAsync();
-
-        return new CountryRoundResponse(_countryA, _countryB);
+        return new CountryRoundResponse(new CountryRound(_countryA.Name), new CountryRound(_countryB.Name)
+ );
     }
 
-    public (bool isCorrect, Country winner) EvaluateAnswer(string selected)
+    public Task<(bool isCorrect, WinnerDto winner)> EvaluateAnswer(string selected)
     {
         Country chosen;
         Country other;
@@ -96,10 +111,12 @@ public class GameService : IGameService
             _previousWinner = other;
         }
 
-        return (isCorrect, _previousWinner);
+        var winnerDto = new WinnerDto(_previousWinner.Name);
+        
+        return Task.FromResult((isCorrect, winnerDto));
     }
 
-    public void ResetGame()
+    public Task ResetGame()
     {
         _roundCount = 0;
         _currentRound = 0;
@@ -110,5 +127,7 @@ public class GameService : IGameService
         _countryA = null;
         _countryB = null;
         _alreadyAnswered = false;
+
+        return Task.CompletedTask;
     }
 }

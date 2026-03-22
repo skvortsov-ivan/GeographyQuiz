@@ -1,6 +1,8 @@
 ﻿using GeographyQuiz.Exceptions;
 using GeographyQuiz.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.RateLimiting;
+using System.Threading.RateLimiting;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
 
@@ -65,9 +67,28 @@ builder.Services.AddProblemDetails(options =>
     };
 });
 
+builder.Services.AddRateLimiter(options =>
+{
+    // Vi bestämmer att om man blir nekad ska man få 429 Too Many Requests
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+
+    options.AddFixedWindowLimiter("fixed", config =>
+    {
+        config.Window = TimeSpan.FromMinutes(1); // Fönstret är 1 minut långt
+        config.PermitLimit = 10; // Man får göra 6 anrop under denna minut
+        config.QueueLimit = 0; // Vi tillåter ingen kö just nu. Blir det fullt så är det tvärnit.
+    });
+
+    options.AddSlidingWindowLimiter("sliding", config =>
+    {
+        config.Window = TimeSpan.FromMinutes(1);
+        config.SegmentsPerWindow = 10;
+        config.PermitLimit = 10;
+    });
+});
+
 // Swagger
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
 
 // HybridCache (för caching)
 #pragma warning disable EXTEXP0018
@@ -167,6 +188,10 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+
+app.UseRouting();     
+
+app.UseRateLimiter();  
 
 app.UseAuthentication();
 

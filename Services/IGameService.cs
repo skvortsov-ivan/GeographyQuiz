@@ -6,8 +6,8 @@ namespace GeographyQuiz.Services
     public interface IGameService
     {
         Task<CountryRoundResponse> GenerateRoundAsync();
-        (bool isCorrect, Country winner) EvaluateAnswer(string selected);
-        void ResetGame();
+        Task<(bool isCorrect, WinnerDto winner)> EvaluateAnswer(string selected);
+        Task ResetGame();
     }
 
 }
