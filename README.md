@@ -57,7 +57,7 @@ The API uses:
 
 | Technology | Purpose |
 |-----------|---------|
-| **ASP.NET Core 8** | Web API framework |
+| **ASP.NET Core 9** | Web API framework |
 | **HybridCache** | Caching external API responses |
 | **HttpClient (Typed)** | API Ninjas integration |
 | **JWT Authentication** | Admin login & role-based access |
